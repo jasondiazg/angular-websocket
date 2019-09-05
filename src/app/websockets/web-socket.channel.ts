@@ -1,10 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { WebSocketBroker } from './web-socket.broker';
 import { Subscription } from 'stompjs';
 
 @Injectable()
-export class WebSocketChannel {
+export class WebSocketChannel implements OnDestroy {
     private channel: string;
+    private subscription$: Subscription;
 
     constructor(private readonly webSocketBroker: WebSocketBroker) { }
 
@@ -13,11 +14,13 @@ export class WebSocketChannel {
     }
 
     subscribe(callback: Function): Subscription {
-        return this.webSocketBroker.stompClient.subscribe(`${this.channel}`, (message) => callback(message) );
+        this.subscription$ = this.webSocketBroker.stompClient.subscribe(`${this.channel}`, (message) => callback(message));
+        return this.subscription$;
     }
 
     subscribeToPath(path: string, callback: Function): Subscription {
-        return this.webSocketBroker.stompClient.subscribe(`${this.channel}/${path}`, (message) => callback(message) );
+        this.subscription$ = this.webSocketBroker.stompClient.subscribe(`${this.channel}/${path}`, (message) => callback(message));
+        return this.subscription$;
     }
 
     send(data: string, headers?: any) {
@@ -29,7 +32,12 @@ export class WebSocketChannel {
     }
 
     unsubscribe() {
+        this.subscription$ = undefined;
         return this.webSocketBroker.stompClient.unsubscribe(`${this.channel}`);
+    }
+
+    ngOnDestroy() {
+        this.subscription$ && this.subscription$.unsubscribe();
     }
 
 }

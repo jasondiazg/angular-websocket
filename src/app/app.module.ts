@@ -8,6 +8,7 @@ import { ToastrModule } from 'ngx-toastr';
 import { SimOperationsComponent } from './components/sim-operations/sim-operations.component';
 import { ReactiveFormsModule } from "@angular/forms";
 import { HttpClientModule } from "@angular/common/http";
+import { WebSocketBroker } from './websockets/web-socket.broker';
 
 @NgModule({
   declarations: [
@@ -22,7 +23,7 @@ import { HttpClientModule } from "@angular/common/http";
     ReactiveFormsModule,
     HttpClientModule
   ],
-  providers: [],
+  providers: [WebSocketBroker],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

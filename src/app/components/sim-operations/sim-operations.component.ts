@@ -37,7 +37,6 @@ export class SimOperationsComponent implements OnInit {
       this.toastr.success("new message recieved", null, { 'timeOut': 3000 });
     }
   }
-
 }
 
 export interface SocketMessage {
