@@ -9,6 +9,8 @@ import { SimOperationsComponent } from './components/sim-operations/sim-operatio
 import { ReactiveFormsModule } from "@angular/forms";
 import { HttpClientModule } from "@angular/common/http";
 import { WebSocketBroker } from './websockets/web-socket.broker';
+import { WebSocketTestService } from './services/websocket-test.service';
+import { WebSocketChannel } from './websockets/web-socket.channel';
 
 @NgModule({
   declarations: [
@@ -23,7 +25,7 @@ import { WebSocketBroker } from './websockets/web-socket.broker';
     ReactiveFormsModule,
     HttpClientModule
   ],
-  providers: [WebSocketBroker],
+  providers: [WebSocketBroker, WebSocketChannel, WebSocketTestService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

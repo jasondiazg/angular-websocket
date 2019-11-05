@@ -1,6 +1,6 @@
 import { Injectable, OnDestroy } from '@angular/core';
 import { WebSocketBroker } from './web-socket.broker';
-import { Subscription } from 'stompjs';
+import { Subscription, Message } from 'stompjs';
 
 @Injectable()
 export class WebSocketChannel implements OnDestroy {
@@ -9,31 +9,54 @@ export class WebSocketChannel implements OnDestroy {
 
     constructor(private readonly webSocketBroker: WebSocketBroker) { }
 
+    private checkConnection(callback: Function) {
+        if (!this.webSocketBroker.stompClient.connected) {
+            this.webSocketBroker.connect(callback);
+        } else {
+            callback();
+        }
+    }
+
     setChannel(channel: string) {
         this.channel = channel;
     }
 
-    subscribe(callback: Function): Subscription {
-        this.subscription$ = this.webSocketBroker.stompClient.subscribe(`${this.channel}`, (message) => callback(message));
-        return this.subscription$;
+    subscribe(callback: Function) {
+        let subscribeCallback = () => { this.subscription$ = this.webSocketBroker.stompClient.subscribe(`${this.channel}`, (message) => callback(message)); };
+        this.checkConnection(subscribeCallback);
     }
 
-    subscribeToPath(path: string, callback: Function): Subscription {
-        this.subscription$ = this.webSocketBroker.stompClient.subscribe(`${this.channel}/${path}`, (message) => callback(message));
-        return this.subscription$;
+    subscribeToPath(path: string, callback: Function) {
+        let subscribeCallback = () => { this.subscription$ = this.webSocketBroker.stompClient.subscribe(`${this.channel}/${path}`, 
+        (message: Message) => { 
+            callback(message) 
+        })};
+        this.checkConnection(subscribeCallback);
     }
 
     send(data: string, headers?: any) {
-        this.webSocketBroker.stompClient.send(`${this.channel}`, headers || {}, data);
+        let sendCallback = () => { this.webSocketBroker.stompClient.send(`${this.channel}`, headers || {}, data); };
+        this.checkConnection(sendCallback);
     }
 
     sendToPath(path: string, data: string, headers?: any) {
-        this.webSocketBroker.stompClient.send(`${this.channel}/${path}`, headers || {}, data);
+        let sendCallBack = () => { this.webSocketBroker.stompClient.send(`${this.channel}/${path}`, headers || {}, data); };
+        this.checkConnection(sendCallBack);
     }
 
     unsubscribe() {
-        this.subscription$ = undefined;
-        return this.webSocketBroker.stompClient.unsubscribe(`${this.channel}`);
+        let unsubscribeCallback = () => {
+            this.subscription$ = undefined;
+            this.webSocketBroker.stompClient.unsubscribe(`${this.channel}`);
+        };
+        this.checkConnection(unsubscribeCallback);
+    }
+
+    unsubscribeToPath(path: string) {
+        let unsubscribeCallback = () => {
+            this.webSocketBroker.stompClient.unsubscribe(`${this.channel}/${path}`);
+        };
+        this.checkConnection(unsubscribeCallback);
     }
 
     ngOnDestroy() {

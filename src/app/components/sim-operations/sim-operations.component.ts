@@ -1,6 +1,6 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { FormGroup, FormControl, Validators } from '@angular/forms';
-import { SocketService } from '../../services/socket.service';
+import { WebSocketTestService } from '../../services/websocket-test.service';
 import { ToastrService } from 'ngx-toastr';
 import { Subscription } from 'rxjs';
 
@@ -9,37 +9,73 @@ import { Subscription } from 'rxjs';
   templateUrl: './sim-operations.component.html',
   styleUrls: ['./sim-operations.component.css']
 })
-export class SimOperationsComponent implements OnInit {
+export class SimOperationsComponent implements OnInit, OnDestroy {
   private form: FormGroup;
-  simOperations: SocketMessage[] = [];
-  socketSubscription: Subscription;
+  messages: string;
+  socketSubscription$: Subscription;
+  suscribed: boolean = false;
 
-  constructor(private socketService: SocketService, private toastr: ToastrService) { 
-    this.socketSubscription = this.socketService.simOperations.subscribe(simOperations => this.handleResult(simOperations));
-  }
+  constructor(private socketService: WebSocketTestService, private toastr: ToastrService) { }
 
   ngOnInit() {
     this.form = new FormGroup({
+      userId: new FormControl(null, [Validators.required]),
       message: new FormControl(null, [Validators.required]),
       simId: new FormControl(null, [Validators.required])
-    })
+    });
+
+    this.form.controls.userId.valueChanges.subscribe(value => this.suscribed = false);
+    this.form.controls.simId.valueChanges.subscribe(value => this.suscribed = false);
   }
 
-  subscribeToSocket() {
+  ngOnDestroy() {
+    this.socketSubscription$ && this.socketSubscription$.unsubscribe();
+  }
+
+  subscribeToChannel() {
+    if (this.form.value.userId && this.form.value.simId) {
+      this.socketService.subscribeToChannel(this.form.value.userId, this.form.value.simId);
+      this.socketSubscription$ = this.socketService.simOperations.subscribe(message => { if (message) this.handleResult(message); });
+    }
+  }
+
+  checkSubscription() {
+    if (this.socketService.checkSubscription(this.form.value.userId, this.form.value.simId)) {
+      this.suscribedToast();
+      this.suscribed = true;
+    } else {
+      this.unsuscribedToast();
+      this.suscribed = false;
+    }
+  }
+
+  unsubscribeToChannel() {
+    this.socketService.unsubscribeToChannel(this.form.value.userId, this.form.value.simId);
+    this.suscribed = false;
+  }
+
+  sendMessage() {
     if (this.form.valid) {
-      this.socketService.openChannel(this.form.value.simId);
+      this.socketService.sendMessageUsingSocket({ userId: this.form.value.userId, simId: this.form.value.simId, message: this.form.value.message });
     }
   }
 
-  handleResult(simOperations){
-    if (simOperations) {
-      this.simOperations = simOperations;
-      this.toastr.success("new message recieved", null, { 'timeOut': 3000 });
-    }
+  handleResult(message: string) {
+    this.messages += `${message} \n`;
+    this.toastr.success(`New message recieved ${message}`, null, { 'timeOut': 3000 });
+  }
+
+  suscribedToast() {
+    this.toastr.success(`Suscribed!`, null, { 'timeOut': 3000 });
+  }
+
+  unsuscribedToast() {
+    this.toastr.error(`No subscribed!`, null, { 'timeOut': 3000 });
   }
 }
 
-export interface SocketMessage {
-  message: string,
+export interface SubscriptionMessage {
+  userId: string,
   simId: string,
+  message: string
 }
